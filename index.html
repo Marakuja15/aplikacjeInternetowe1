@@ -1,89 +1,25 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Pierogarnia</title>
-  <link rel="stylesheet" href="style1.css">
-  <script src="//wi.arturk.pl/zen-style.js.php?styles[]=style-1&styles[]=style-2" defer></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laboratorium JS - Lista</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header class="site-header">
-    <div class="container">
-      <h1 class="site-title">PIEROGARNIA</h1>
-      
-      <nav class="site-nav" aria-label="Główna nawigacja">
-        <ul class="site-nav_list">
-          <li class="site-nav_item"><a href="#menu">Menu</a></li>
-          <li class="site-nav_item"><a href="#historia-pierogow">Historia pierogów</a></li>
-          <li class="site-nav_item"><a href="#kontakt">Kontakt</a></li>
-        </ul>
-      </nav>
+    <h1>Lista zadań</h1>
+    
+    <input type="text" id="searchBox" class="search-box" placeholder="Wyszukaj (min. 2 znaki)...">
+    
+    <ul id="itemList" class="item-list">
+    </ul>
+    
+    <div class="add-form">
+        <input type="text" id="addInput" class="add-input" placeholder="Nowe zadanie (3-255 znaków)...">
+        <input type="datetime-local" id="dateInput" class="date-input">
+        <button id="addBtn" class="add-btn">Dodaj</button>
     </div>
-  </header>
-
-  <main class="site-main container">
-    <section id="menu" class="section section_menu">
-      <h2 class="section_title">Menu</h2>
-
-      <div class="dish-grid">
-        <article class="dish">
-          <h3 class="dish_name">Pierogi z mięsem</h3>
-          <img src="img/meat.png" alt="Talerz z pierogami z mięsem, podany z cebulką i skwarkami"></img>
-          <p class="dish_price">Cena: <span class="price-amount">24 zł</span> / <span class="price-unit">10 szt.</span></p>
-          <p class="dish_desc">Soczyste nadzienie z wieprzowiny i wołowiny, doprawione czosnkiem i majerankiem.</p>
-          <p class="dish_desc">Podawane z cebulką i skwarkami; polecamy ze śmietaną lub sosem pieczeniowym.</p>
-
-        </article>
-
-        <article class="dish">
-          <h3 class="dish_name">Pierogi ruskie</h3>
-          <img src="img/russian.png" alt="Talerz z pierogami z mięsem, podany z cebulką i skwarkami"></img>
-          <p class="dish_price">Cena: <span class="price-amount">20 zł</span> / <span class="price-unit">10 szt.</span></p>
-          <p class="dish_desc">Klasyczne nadzienie z ziemniaków i twarogu w proporcji 2:1, delikatnie pieprzne.</p>
-          <p class="dish_desc">Świetne z masłem klarowanym i prażoną cebulką; opcjonalnie szczypiorek.</p>
-        </article>
-
-        <article class="dish">
-          <h3 class="dish_name">Pierogi z kapustą i grzybami</h3>
-          <img src="img/mushroom.png" alt="Talerz z pierogami z mięsem, podany z cebulką i skwarkami"> </img>
-          <p class="dish_price">Cena: <span class="price-amount">22 zł</span> / <span class="price-unit">10 szt.</span></p>
-          <p class="dish_desc">Aromatyczna kiszona kapusta z borowikami i podgrzybkami, duszona z liściem laurowym.</p>
-          <p class="dish_desc">Idealne na święta, ale dostępne cały rok — polecane z olejem lnianym.</p>
-        </article>
-      </div>
-
-      <ul class="feature-list">
-        <li>Dodatki: cebulka, skwarki, śmietana, masło klarowane, szczypiorek</li>
-        <li>Rozmiary porcji: 6, 10 lub 14 sztuk</li>
-        <li>Opcje wege: ruskie, kapusta i grzyby, szpinak z fetą</li>
-      </ul>
-    </section>
-
-    <section id="historia-pierogow" class="section section_history">
-      <h2 class="section_title">Historia pierogów</h2>
-
-      <h3 class="section_subtitle">Pochodzenie</h3>
-      <p>Najczęściej wskazuje się na wpływy wschodnie i przybycie pierogów do Polski w średniowieczu.</p>
-      <p>Z czasem danie zaadaptowało lokalne smaki i zaczęło występować w wielu regionalnych odmianach.</p>
-
-      <h3 class="section_subtitle">Współczesność</h3>
-      <p>Dziś pierogi są symbolem kuchni domowej i popularnym daniem street‑foodowym.</p>
-      <p>Eksperymentujemy z farszami słonymi i słodkimi, a także wersjami pieczonymi i bezglutenowymi.</p>
-    </section>
-
-    <section id="kontakt" class="section section_contact">
-      <h2 class="section_title">Kontakt</h2>
-      <p>Adres: ul. Pierogowa 10, Szczecin</p>
-      <p>Telefon: +48 123 456 789</p>
-      <p>Email: pierogi15@gmail.com</p>
-    </section>
-  </main>
-
-  <footer class="site-footer">
-    <div class="container">
-      <p>© 2025 Pierogarnia by Piotr Świstak</p>
-    </div>
-  </footer>
+    
+    <script src="script.js"></script>
 </body>
 </html>
