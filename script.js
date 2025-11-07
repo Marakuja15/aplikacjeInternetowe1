@@ -1,234 +1,273 @@
-class Todo {
-    constructor() {
-        this.tasks = [];
-        this.nextId = 1;
-        this.listElement = document.getElementById('itemList');
-        this.addButton = document.getElementById('addBtn');
-        this.addInput = document.getElementById('addInput');
-        this.dateInput = document.getElementById('dateInput');
-        this.searchBox = document.getElementById('searchBox');
-        this.editingId = null;
-        
-        this.loadFromStorage();
-        this.init();
+const btnLocation = document.getElementById('request-location');
+const btnNotify = document.getElementById('request-notification');
+const btnMyLocation = document.getElementById('my-location');
+const btnDownload = document.getElementById('download-map');
+const btnStartPuzzle = document.getElementById('start-puzzle');
+let map = L.map('map').setView([51.505, -0.09], 13);
+
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+}).addTo(map);
+
+L.marker([51.5, -0.09]).addTo(map)
+    .bindPopup('A pretty CSS popup.<br> Easily customizable.')
+    .openPopup();
+let lat;
+let lng;
+let mapImageData = null;
+let pieces = [];
+let slots = [];
+
+btnLocation.addEventListener('click', () => {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                console.log('Lokalizacja przyznana');
+                lat = position.coords.latitude;
+                lng = position.coords.longitude;
+            },
+            (error) => {
+                alert('Could not get location');
+            }
+        );
+    } else {
+        alert('Geolocation is not supported by this browser.');
     }
-    
-    init() {
-        this.draw();
-        
-        this.addButton.addEventListener('click', () => this.addTask());
-        this.addInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') this.addTask();
-        });
-        
-        this.searchBox.addEventListener('input', () => this.draw());
-    }
-    
-    draw() {
-        this.listElement.innerHTML = '';
-        
-        const searchText = this.searchBox.value.toLowerCase().trim();
-        
-        let filteredTasks = this.tasks;
-        if (searchText.length >= 2) {
-            filteredTasks = this.tasks.filter(task => 
-                task.text.toLowerCase().includes(searchText)
-            );
-        }
-        
-        filteredTasks.forEach(task => {
-            const li = document.createElement('li');
-            li.className = 'item';
-            li.dataset.id = task.id;
-            
-            if (this.editingId === task.id) {
-                const textInput = document.createElement('input');
-                textInput.type = 'text';
-                textInput.className = 'item-edit';
-                textInput.value = task.text;
-                
-                const dateInput = document.createElement('input');
-                dateInput.type = 'datetime-local';
-                dateInput.className = 'date-edit';
-                dateInput.value = task.date || '';
-                
-                textInput.addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') {
-                        this.saveEdit();
-                    }
+});
+
+btnNotify.addEventListener('click', () => {
+    if ('Notification' in window) {
+        Notification.requestPermission().then((permission) => {
+            if (permission === 'granted') {
+                new Notification('Sukces!', {
+                    body: 'Powiadomienia działają',
                 });
-                
-                li.appendChild(textInput);
-                li.appendChild(dateInput);
-                
-                setTimeout(() => textInput.focus(), 0);
+            } else if (permission === 'denied') {
+                alert('No notifications');
             } else {
-                const contentDiv = document.createElement('div');
-                contentDiv.className = 'item-content';
-                contentDiv.addEventListener('click', () => this.editTask(task.id));
-                
-                const textSpan = document.createElement('span');
-                textSpan.className = 'item-text';
-                
-                if (searchText.length >= 2) {
-                    const escapedSearch = searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                    const regex = new RegExp(`(${escapedSearch})`, 'gi');
-                    textSpan.innerHTML = task.text.replace(regex, '<mark>$1</mark>');
-                } else {
-                    textSpan.textContent = task.text;
-                }
-                
-                contentDiv.appendChild(textSpan);
-                
-                if (task.date) {
-                    const dateSpan = document.createElement('span');
-                    dateSpan.className = 'item-date';
-                    const date = new Date(task.date);
-                    dateSpan.textContent = date.toLocaleString('pl-PL');
-                    contentDiv.appendChild(dateSpan);
-                }
-                
-                li.appendChild(contentDiv);
+                alert('No decision');
             }
-            
-            const actionBtn = document.createElement('button');
-            
-            if (this.editingId === task.id) {
-                actionBtn.className = 'save-btn';
-                actionBtn.textContent = 'Zmień';
-                actionBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    this.saveEdit();
-                });
-            } else {
-                actionBtn.className = 'delete-btn';
-                actionBtn.textContent = 'Usuń';
-                actionBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    this.deleteTask(task.id);
-                });
-            }
-            
-            li.appendChild(actionBtn);
-            this.listElement.appendChild(li);
         });
+    } else {
+        alert('error');
     }
-    
-    addTask() {
-        const text = this.addInput.value.trim();
-        const date = this.dateInput.value;
-        
-        if (text.length < 3) {
-            alert('Zadanie musi mieć minimum 3 znaki!');
-            return;
-        }
-        if (text.length > 255) {
-            alert('Zadanie może mieć maksymalnie 255 znaków!');
-            return;
-        }
-        
-        if (date) {
-            const selectedDate = new Date(date);
-            const now = new Date();
-            if (selectedDate < now) {
-                alert('Data musi być w przyszłości!');
-                return;
-            }
-        }
-        
-        this.tasks.push({
-            id: this.nextId++,
-            text: text,
-            date: date || null
+});
+
+btnMyLocation.addEventListener('click', () => {
+    if (lat && lng) {
+        map.setView([lat, lng], 13);
+        L.marker([lat, lng]).addTo(map)
+            .bindPopup('Twoja lokalizacja')
+            .openPopup();
+    }
+});
+
+btnDownload.addEventListener('click', () => {
+    if (!map) {
+        alert('No map');
+        return;
+    }
+    const mapElement = document.getElementById('map');
+    const controls = document.querySelectorAll('.leaflet-control-container');
+    controls.forEach(control => control.style.display = 'none');
+
+    setTimeout(() => {
+        html2canvas(mapElement, {
+            useCORS: true,
+            allowTaint: true,
+            logging: true
+        }).then(canvas => {
+            mapImageData = canvas.toDataURL('image/png');
+            document.getElementById('start-puzzle').disabled = false;
+            alert('Map is ready.');
+        }).catch(error => {
+            console.error('Error:', error);
+            alert('Error: ' + error.message);
+        }).finally(() => {
+            controls.forEach(control => control.style.display = '');
         });
-        
-        this.addInput.value = '';
-        this.dateInput.value = '';
-        this.addInput.focus();
-        
-        this.saveToStorage();
-        this.draw();
+    }, 1000);
+});
+
+btnStartPuzzle.addEventListener('click', () => {
+    if (!mapImageData) {
+        alert('Najpierw pobierz mapę');
+        return;
     }
-    
-    deleteTask(id) {
-        if (confirm('Czy na pewno chcesz usunąć to zadanie?')) {
-            this.tasks = this.tasks.filter(task => task.id !== id);
-            this.saveToStorage();
-            this.draw();
-        }
+
+    document.getElementById('puzzle-area').classList.remove('hidden');
+    createPuzzle();
+});
+
+function handleAreaDrop(e) {
+    e.preventDefault();
+    const pieceIndex = e.dataTransfer.getData('text/html');
+    if (!pieceIndex) return;
+
+    const piece = pieces[pieceIndex];
+    if (!piece) return;
+
+    if (piece.dataset.currentSlotIndex) {
+        const oldSlot = slots[piece.dataset.currentSlotIndex];
+        delete oldSlot.dataset.occupied;
+        delete piece.dataset.currentSlotIndex;
     }
-    
-    editTask(id) {
-        this.editingId = id;
-        this.draw();
+
+    const table = document.getElementById('puzzle-table');
+    const tableRect = table.getBoundingClientRect();
+    const pieceSize = 100;
+
+    piece.style.left = (e.clientX - tableRect.left - pieceSize / 2) + 'px';
+    piece.style.top = (e.clientY - tableRect.top - pieceSize / 2) + 'px';
+
+    piece.classList.remove('correct');
+    piece.style.borderColor = '#333';
+
+    checkIfComplete();
+}
+
+function createPuzzle() {
+    const table = document.getElementById('puzzle-table');
+    table.innerHTML = '';
+    table.addEventListener('dragover', (e) => e.preventDefault());
+    table.addEventListener('drop', handleAreaDrop);
+    pieces = [];
+    slots = [];
+
+    const pieceSize = 100;
+    const gridSize = pieceSize * 4;
+
+    const grid = document.createElement('div');
+    grid.id = 'puzzle-grid';
+    grid.style.cssText = `
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        width: ${gridSize}px;
+        height: ${gridSize}px;
+        display: grid;
+        grid-template-columns: repeat(4, ${pieceSize}px);
+        grid-template-rows: repeat(4, ${pieceSize}px);
+        gap: 0;
+        border: 3px solid #333;
+    `;
+
+    for (let i = 0; i < 16; i++) {
+        const row = Math.floor(i / 4);
+        const col = i % 4;
+
+        const slot = document.createElement('div');
+        slot.className = 'puzzle-slot';
+        slot.style.cssText = `
+            background: rgba(200, 200, 200, 0.3);
+            border: 1px solid #999;
+        `;
+        slot.dataset.row = row;
+        slot.dataset.col = col;
+        slot.dataset.index = i;
+
+        slot.addEventListener('dragover', (e) => e.preventDefault());
+        slot.addEventListener('drop', (e) => {
+            e.stopPropagation();
+            handleDrop(e);
+        });
+
+        grid.appendChild(slot);
+        slots.push(slot);
     }
-    
-    saveEdit() {
-        if (this.editingId === null) return;
-        
-        const textInput = document.querySelector('.item-edit');
-        const dateInput = document.querySelector('.date-edit');
-        
-        if (textInput) {
-            const newText = textInput.value.trim();
-            const newDate = dateInput ? dateInput.value : null;
-            
-            if (newText.length < 3) {
-                alert('Zadanie musi mieć minimum 3 znaki!');
-                this.editingId = null;
-                this.draw();
-                return;
-            }
-            if (newText.length > 255) {
-                alert('Zadanie może mieć maksymalnie 255 znaków!');
-                this.editingId = null;
-                this.draw();
-                return;
-            }
-            
-            if (newDate) {
-                const selectedDate = new Date(newDate);
-                const now = new Date();
-                if (selectedDate < now) {
-                    alert('Data musi być w przyszłości!');
-                    this.editingId = null;
-                    this.draw();
-                    return;
-                }
-            }
-            
-            const task = this.tasks.find(t => t.id === this.editingId);
-            if (task) {
-                task.text = newText;
-                task.date = newDate || null;
-                this.saveToStorage();
-            }
-        }
-        
-        this.editingId = null;
-        this.draw();
+    table.appendChild(grid);
+
+    for (let i = 0; i < 16; i++) {
+        const row = Math.floor(i / 4);
+        const col = i % 4;
+
+        const piece = document.createElement('div');
+        piece.className = 'puzzle-piece';
+        piece.draggable = true;
+
+        piece.style.cssText = `
+            position: absolute;
+            width: ${pieceSize}px;
+            height: ${pieceSize}px;
+            background-image: url(${mapImageData});
+            background-size: ${gridSize}px ${gridSize}px;
+            background-position: -${col * pieceSize}px -${row * pieceSize}px;
+            cursor: move;
+            border: 2px solid #333;
+        `;
+
+        piece.style.left = (20 + Math.random() * 600) + 'px';
+        piece.style.top = (gridSize + 100 + Math.random() * 200) + 'px';
+
+        piece.dataset.correctRow = row;
+        piece.dataset.correctCol = col;
+        piece.dataset.correctIndex = i;
+
+        piece.addEventListener('dragstart', (e) => {
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', e.target.dataset.correctIndex);
+            e.target.style.opacity = '0.4';
+        });
+
+        piece.addEventListener('dragend', (e) => {
+            e.target.style.opacity = '1';
+        });
+
+        table.appendChild(piece);
+        pieces.push(piece);
     }
-    
-    saveToStorage() {
-        localStorage.setItem('todoTasks', JSON.stringify(this.tasks));
-        localStorage.setItem('todoNextId', this.nextId.toString());
+
+    console.log('Puzzle created');
+}
+
+function handleDrop(e) {
+    e.preventDefault();
+
+    const pieceIndex = e.dataTransfer.getData('text/html');
+    const piece = pieces[pieceIndex];
+    const slot = e.currentTarget;
+
+    if (slot.dataset.occupied) {
+        return;
     }
-    
-    loadFromStorage() {
-        const stored = localStorage.getItem('todoTasks');
-        const storedNextId = localStorage.getItem('todoNextId');
-        
-        if (stored) {
-            this.tasks = JSON.parse(stored);
-        }
-        
-        if (storedNextId) {
-            this.nextId = parseInt(storedNextId);
-        } else if (this.tasks.length > 0) {
-            this.nextId = Math.max(...this.tasks.map(t => t.id)) + 1;
+
+    if (piece.dataset.currentSlotIndex) {
+        const oldSlot = slots[piece.dataset.currentSlotIndex];
+        delete oldSlot.dataset.occupied;
+    }
+
+    const slotRect = slot.getBoundingClientRect();
+    const tableRect = document.getElementById('puzzle-table').getBoundingClientRect();
+
+    piece.style.left = (slotRect.left - tableRect.left) + 'px';
+    piece.style.top = (slotRect.top - tableRect.top) + 'px';
+
+    slot.dataset.occupied = 'true';
+    piece.dataset.currentSlotIndex = slot.dataset.index;
+
+    if (slot.dataset.index === piece.dataset.correctIndex) {
+        piece.classList.add('correct');
+        piece.style.borderColor = 'green';
+    } else {
+        piece.classList.remove('correct');
+        piece.style.borderColor = '#333';
+    }
+
+    checkIfComplete();
+}
+
+function checkIfComplete() {
+    const allCorrect = pieces.every(piece => piece.classList.contains('correct'));
+
+    if (allCorrect) {
+        console.log('COMPLETE!');
+
+        if (Notification.permission === 'granted') {
+            new Notification('Gratulacje!', {
+                body: 'Ułożyłeś wszystkie puzzle',
+            });
+        } else {
+            alert('Gratulacje');
         }
     }
 }
-
-const todo = new Todo();
-window.todo = todo;
