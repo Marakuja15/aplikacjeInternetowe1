@@ -1,273 +1,111 @@
-const btnLocation = document.getElementById('request-location');
-const btnNotify = document.getElementById('request-notification');
-const btnMyLocation = document.getElementById('my-location');
-const btnDownload = document.getElementById('download-map');
-const btnStartPuzzle = document.getElementById('start-puzzle');
-let map = L.map('map').setView([51.505, -0.09], 13);
 
-L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-}).addTo(map);
+const API_KEY = 'b3017924b9479c09456f4b5da5f562a7'; 
 
-L.marker([51.5, -0.09]).addTo(map)
-    .bindPopup('A pretty CSS popup.<br> Easily customizable.')
-    .openPopup();
-let lat;
-let lng;
-let mapImageData = null;
-let pieces = [];
-let slots = [];
 
-btnLocation.addEventListener('click', () => {
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                console.log('Lokalizacja przyznana');
-                lat = position.coords.latitude;
-                lng = position.coords.longitude;
-            },
-            (error) => {
-                alert('Could not get location');
-            }
-        );
-    } else {
-        alert('Geolocation is not supported by this browser.');
-    }
-});
+const btn = document.getElementById('getWeatherBtn');
+const input = document.getElementById('cityInput');
+const currentSection = document.getElementById('currentWeatherSection');
+const forecastSection = document.getElementById('forecastSection');
 
-btnNotify.addEventListener('click', () => {
-    if ('Notification' in window) {
-        Notification.requestPermission().then((permission) => {
-            if (permission === 'granted') {
-                new Notification('Sukces!', {
-                    body: 'Powiadomienia działają',
-                });
-            } else if (permission === 'denied') {
-                alert('No notifications');
-            } else {
-                alert('No decision');
-            }
-        });
-    } else {
-        alert('error');
-    }
-});
+btn.addEventListener('click', function() {
+    const city = input.value.trim();
 
-btnMyLocation.addEventListener('click', () => {
-    if (lat && lng) {
-        map.setView([lat, lng], 13);
-        L.marker([lat, lng]).addTo(map)
-            .bindPopup('Twoja lokalizacja')
-            .openPopup();
-    }
-});
-
-btnDownload.addEventListener('click', () => {
-    if (!map) {
-        alert('No map');
-        return;
-    }
-    const mapElement = document.getElementById('map');
-    const controls = document.querySelectorAll('.leaflet-control-container');
-    controls.forEach(control => control.style.display = 'none');
-
-    setTimeout(() => {
-        html2canvas(mapElement, {
-            useCORS: true,
-            allowTaint: true,
-            logging: true
-        }).then(canvas => {
-            mapImageData = canvas.toDataURL('image/png');
-            document.getElementById('start-puzzle').disabled = false;
-            alert('Map is ready.');
-        }).catch(error => {
-            console.error('Error:', error);
-            alert('Error: ' + error.message);
-        }).finally(() => {
-            controls.forEach(control => control.style.display = '');
-        });
-    }, 1000);
-});
-
-btnStartPuzzle.addEventListener('click', () => {
-    if (!mapImageData) {
-        alert('Najpierw pobierz mapę');
+    if (city === "") {
+        alert("Proszę wpisać nazwę miasta.");
         return;
     }
 
-    document.getElementById('puzzle-area').classList.remove('hidden');
-    createPuzzle();
+    currentSection.innerHTML = '<p>Ładowanie pogody bieżącej...</p>';
+    forecastSection.innerHTML = '<p>Ładowanie prognozy...</p>';
+
+    getCurrentWeatherXHR(city);
+    getForecastFetch(city);
 });
 
-function handleAreaDrop(e) {
-    e.preventDefault();
-    const pieceIndex = e.dataTransfer.getData('text/html');
-    if (!pieceIndex) return;
 
-    const piece = pieces[pieceIndex];
-    if (!piece) return;
+function getCurrentWeatherXHR(city) {
+    const xhr = new XMLHttpRequest();
+    const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${API_KEY}&units=metric&lang=pl`;
 
-    if (piece.dataset.currentSlotIndex) {
-        const oldSlot = slots[piece.dataset.currentSlotIndex];
-        delete oldSlot.dataset.occupied;
-        delete piece.dataset.currentSlotIndex;
-    }
+    xhr.open('GET', url, true);
 
-    const table = document.getElementById('puzzle-table');
-    const tableRect = table.getBoundingClientRect();
-    const pieceSize = 100;
-
-    piece.style.left = (e.clientX - tableRect.left - pieceSize / 2) + 'px';
-    piece.style.top = (e.clientY - tableRect.top - pieceSize / 2) + 'px';
-
-    piece.classList.remove('correct');
-    piece.style.borderColor = '#333';
-
-    checkIfComplete();
-}
-
-function createPuzzle() {
-    const table = document.getElementById('puzzle-table');
-    table.innerHTML = '';
-    table.addEventListener('dragover', (e) => e.preventDefault());
-    table.addEventListener('drop', handleAreaDrop);
-    pieces = [];
-    slots = [];
-
-    const pieceSize = 100;
-    const gridSize = pieceSize * 4;
-
-    const grid = document.createElement('div');
-    grid.id = 'puzzle-grid';
-    grid.style.cssText = `
-        position: absolute;
-        top: 20px;
-        left: 20px;
-        width: ${gridSize}px;
-        height: ${gridSize}px;
-        display: grid;
-        grid-template-columns: repeat(4, ${pieceSize}px);
-        grid-template-rows: repeat(4, ${pieceSize}px);
-        gap: 0;
-        border: 3px solid #333;
-    `;
-
-    for (let i = 0; i < 16; i++) {
-        const row = Math.floor(i / 4);
-        const col = i % 4;
-
-        const slot = document.createElement('div');
-        slot.className = 'puzzle-slot';
-        slot.style.cssText = `
-            background: rgba(200, 200, 200, 0.3);
-            border: 1px solid #999;
-        `;
-        slot.dataset.row = row;
-        slot.dataset.col = col;
-        slot.dataset.index = i;
-
-        slot.addEventListener('dragover', (e) => e.preventDefault());
-        slot.addEventListener('drop', (e) => {
-            e.stopPropagation();
-            handleDrop(e);
-        });
-
-        grid.appendChild(slot);
-        slots.push(slot);
-    }
-    table.appendChild(grid);
-
-    for (let i = 0; i < 16; i++) {
-        const row = Math.floor(i / 4);
-        const col = i % 4;
-
-        const piece = document.createElement('div');
-        piece.className = 'puzzle-piece';
-        piece.draggable = true;
-
-        piece.style.cssText = `
-            position: absolute;
-            width: ${pieceSize}px;
-            height: ${pieceSize}px;
-            background-image: url(${mapImageData});
-            background-size: ${gridSize}px ${gridSize}px;
-            background-position: -${col * pieceSize}px -${row * pieceSize}px;
-            cursor: move;
-            border: 2px solid #333;
-        `;
-
-        piece.style.left = (20 + Math.random() * 600) + 'px';
-        piece.style.top = (gridSize + 100 + Math.random() * 200) + 'px';
-
-        piece.dataset.correctRow = row;
-        piece.dataset.correctCol = col;
-        piece.dataset.correctIndex = i;
-
-        piece.addEventListener('dragstart', (e) => {
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/html', e.target.dataset.correctIndex);
-            e.target.style.opacity = '0.4';
-        });
-
-        piece.addEventListener('dragend', (e) => {
-            e.target.style.opacity = '1';
-        });
-
-        table.appendChild(piece);
-        pieces.push(piece);
-    }
-
-    console.log('Puzzle created');
-}
-
-function handleDrop(e) {
-    e.preventDefault();
-
-    const pieceIndex = e.dataTransfer.getData('text/html');
-    const piece = pieces[pieceIndex];
-    const slot = e.currentTarget;
-
-    if (slot.dataset.occupied) {
-        return;
-    }
-
-    if (piece.dataset.currentSlotIndex) {
-        const oldSlot = slots[piece.dataset.currentSlotIndex];
-        delete oldSlot.dataset.occupied;
-    }
-
-    const slotRect = slot.getBoundingClientRect();
-    const tableRect = document.getElementById('puzzle-table').getBoundingClientRect();
-
-    piece.style.left = (slotRect.left - tableRect.left) + 'px';
-    piece.style.top = (slotRect.top - tableRect.top) + 'px';
-
-    slot.dataset.occupied = 'true';
-    piece.dataset.currentSlotIndex = slot.dataset.index;
-
-    if (slot.dataset.index === piece.dataset.correctIndex) {
-        piece.classList.add('correct');
-        piece.style.borderColor = 'green';
-    } else {
-        piece.classList.remove('correct');
-        piece.style.borderColor = '#333';
-    }
-
-    checkIfComplete();
-}
-
-function checkIfComplete() {
-    const allCorrect = pieces.every(piece => piece.classList.contains('correct'));
-
-    if (allCorrect) {
-        console.log('COMPLETE!');
-
-        if (Notification.permission === 'granted') {
-            new Notification('Gratulacje!', {
-                body: 'Ułożyłeś wszystkie puzzle',
-            });
+    xhr.onload = function() {
+        if (this.status === 200) {
+            const data = JSON.parse(this.responseText);
+            console.log("Otrzymane dane z API (Current):", data);
+            displayCurrentWeather(data);
         } else {
-            alert('Gratulacje');
+            currentSection.innerHTML = `<p class="error">Błąd XHR: ${this.status} - Nie znaleziono miasta lub błędny klucz API.</p>`;
         }
-    }
+    };
+
+    xhr.onerror = function() {
+        currentSection.innerHTML = '<p class="error">Wystąpił błąd połączenia (XHR).</p>';
+    };
+
+    xhr.send();
+}
+
+function getForecastFetch(city) {
+    const url = `https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${API_KEY}&units=metric&lang=pl`;
+
+    fetch(url)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Błąd HTTP: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log("Dane prognozy (Fetch):", data);
+            displayForecast(data);
+        })
+        .catch(error => {
+            forecastSection.innerHTML = `<p class="error">Błąd Fetch: ${error.message}</p>`;
+        });
+}
+
+function displayCurrentWeather(data) {
+    const iconUrl = `https://openweathermap.org/img/wn/${data.weather[0].icon}@2x.png`;
+    
+    const html = `
+        <h2>Pogoda teraz: ${data.name}, ${data.sys.country}</h2>
+        <div class="weather-card current-card">
+            <img src="${iconUrl}" alt="Ikona pogody">
+            <div>
+                <p><strong>Temperatura:</strong> ${Math.round(data.main.temp)}°C</p>
+                <p><strong>Odczuwalna:</strong> ${Math.round(data.main.feels_like)}°C</p>
+                <p><strong>Opis:</strong> ${data.weather[0].description}</p>
+                <p><strong>Wilgotność:</strong> ${data.main.humidity}%</p>
+            </div>
+        </div>
+    `;
+    currentSection.innerHTML = html;
+}
+
+function displayForecast(data) {
+    let html = `<h2>Prognoza (najbliższe wpisy co 3h):</h2><div class="forecast-grid">`;
+
+
+    const forecastList = data.list.slice(0, 5); 
+
+    forecastList.forEach(item => {
+        const date = new Date(item.dt * 1000);
+        const timeString = date.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+        const dateString = date.toLocaleDateString('pl-PL');
+        const iconUrl = `https://openweathermap.org/img/wn/${item.weather[0].icon}.png`;
+
+        html += `
+            <div class="forecast-item">
+                <p class="date">${dateString}</p>
+                <p class="time">${timeString}</p>
+                <img src="${iconUrl}" alt="Ikona">
+                <p class="temp">${Math.round(item.main.temp)}°C</p>
+                <p class="desc">${item.weather[0].description}</p>
+            </div>
+        `;
+    });
+
+    html += `</div>`;
+    forecastSection.innerHTML = html;
 }
